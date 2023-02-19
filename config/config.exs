@@ -7,8 +7,10 @@
 # General application configuration
 import Config
 
+config :ash, :use_all_identities_in_manage_relationship?, false
+
 config :open_budget,
-  ecto_repos: [OpenBudget.Repo]
+  ash_apis: [OpenBudget.Accounts]
 
 # Configures the endpoint
 config :open_budget, OpenBudgetWeb.Endpoint,

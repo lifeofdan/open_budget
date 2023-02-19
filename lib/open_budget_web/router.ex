@@ -1,5 +1,6 @@
 defmodule OpenBudgetWeb.Router do
   use OpenBudgetWeb, :router
+  use AshAuthentication.Phoenix.Router
 
   pipeline :browser do
     plug :accepts, ["html"]
@@ -8,16 +9,24 @@ defmodule OpenBudgetWeb.Router do
     plug :put_root_layout, {OpenBudgetWeb.Layouts, :root}
     plug :protect_from_forgery
     plug :put_secure_browser_headers
+    plug :load_from_session
   end
 
   pipeline :api do
     plug :accepts, ["json"]
+    plug :load_from_bearer
   end
 
   scope "/", OpenBudgetWeb do
     pipe_through :browser
 
     get "/", PageController, :home
+
+    # Ash Auth routes
+    sign_in_route()
+    sign_out_route AuthController
+    auth_routes_for OpenBudget.Accounts.User, to: AuthController
+    reset_route []
   end
 
   # Other scopes may use custom stacks.
@@ -35,10 +44,10 @@ defmodule OpenBudgetWeb.Router do
     import Phoenix.LiveDashboard.Router
 
     scope "/dev" do
-      pipe_through :browser
+      pipe_through(:browser)
 
-      live_dashboard "/dashboard", metrics: OpenBudgetWeb.Telemetry
-      forward "/mailbox", Plug.Swoosh.MailboxPreview
+      live_dashboard("/dashboard", metrics: OpenBudgetWeb.Telemetry)
+      forward("/mailbox", Plug.Swoosh.MailboxPreview)
     end
   end
 end

@@ -17,9 +17,10 @@ defmodule OpenBudget.Application do
       # Start Finch
       {Finch, name: OpenBudget.Finch},
       # Start the Endpoint (http/https)
-      OpenBudgetWeb.Endpoint
+      OpenBudgetWeb.Endpoint,
       # Start a worker by calling: OpenBudget.Worker.start_link(arg)
       # {OpenBudget.Worker, arg}
+      {AshAuthentication.Supervisor, otp_app: :open_budget}
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

@@ -54,7 +54,12 @@ defmodule OpenBudget.MixProject do
       # My stuff
       {:ash, "~> 2.6"},
       {:ash_postgres, "~> 1.3"},
-      {:ash_phoenix, "~> 1.2"}
+      {:ash_phoenix, "~> 1.2"},
+      {:ash_authentication, "~> 3.9"},
+      {:ash_authentication_phoenix, "~> 1.5"},
+      {:elixir_sense, github: "elixir-lsp/elixir_sense", only: [:dev, :test]},
+      {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
+      {:dialyxir, "~> 1.0", only: [:dev], runtime: false}
     ]
   end
 
