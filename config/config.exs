@@ -10,7 +10,10 @@ import Config
 config :ash, :use_all_identities_in_manage_relationship?, false
 
 config :open_budget,
-  ash_apis: [OpenBudget.Accounts]
+  ash_apis: [
+    OpenBudget.Accounts,
+    OpenBudget.Budgets
+  ]
 
 # Configures the endpoint
 config :open_budget, OpenBudgetWeb.Endpoint,
