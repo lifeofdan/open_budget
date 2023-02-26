@@ -3,12 +3,6 @@ defmodule OpenBudget.Accounts.User do
     data_layer: AshPostgres.DataLayer,
     extensions: [AshAuthentication]
 
-  relationships do
-    has_many :budgets, OpenBudget.Budgets.Budget do
-      api OpenBudget.Budgets.Budget
-    end
-  end
-
   attributes do
     uuid_primary_key :id
     attribute :email, :ci_string, allow_nil?: false

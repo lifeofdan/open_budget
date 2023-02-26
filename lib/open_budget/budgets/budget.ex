@@ -1,10 +1,24 @@
 defmodule OpenBudget.Budgets.Budget do
   use Ash.Resource,
-    data_layer: AshPostgres.DataLayer
+    data_layer: AshPostgres.DataLayer,
+    authorizers: [Ash.Policy.Authorizer]
 
   relationships do
     belongs_to :user, OpenBudget.Accounts.User do
       api OpenBudget.Accounts.User
+      attribute_writable? true
+    end
+  end
+
+  policies do
+    policy action_type(:create) do
+      # You must be a user in order to create a budget
+      authorize_if actor_present()
+    end
+
+    policy action_type([:read, :update]) do
+      # You can only read or update your own budget
+      authorize_if relates_to_actor_via(:user)
     end
   end
 
@@ -14,17 +28,18 @@ defmodule OpenBudget.Budgets.Budget do
   end
 
   actions do
-    update :assign do
-      # No attributes should be accepted
-      accept []
+    defaults [:read, :update, :destroy]
 
-      # We accept a representative's id as input here
-      argument :user_id, :uuid do
-        # This action requires representative_id
-        allow_nil? false
-      end
+    create :create do
+      primary? true
+      change relate_actor(:user)
+    end
 
-      change manage_relationship(:user_id, :user, type: :append_and_remove)
+    create :new_budget do
+      accept [:title]
+
+      argument :user, OpenBudget.Accounts.User
+      change relate_actor(:user)
     end
   end
 
