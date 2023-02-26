@@ -162,6 +162,56 @@ defmodule OpenBudget.BudgetTest do
     assert response == :error
   end
 
+  test "user can delete own budget, user cannot delete other's budget" do
+    user_one =
+      OpenBudget.Accounts.User
+      |> Ash.Changeset.for_create(:register_with_password, %{
+        email: "test@user.com",
+        hashed_password: "password",
+        password: "password",
+        password_confirmation: "password"
+      })
+      |> OpenBudget.Accounts.create!()
+
+    user_two =
+      OpenBudget.Accounts.User
+      |> Ash.Changeset.for_create(:register_with_password, %{
+        email: "test@user2.com",
+        hashed_password: "password",
+        password: "password",
+        password_confirmation: "password"
+      })
+      |> OpenBudget.Accounts.create!()
+
+    budget =
+      OpenBudget.Budgets.Budget
+      |> Ash.Changeset.for_create(:new_budget, %{title: "My new budget"}, actor: user_one)
+      |> OpenBudget.Budgets.create!()
+
+    user_two_attempt_delete =
+      budget
+      |> Ash.Changeset.for_destroy(:destroy, %{}, actor: user_two)
+      |> OpenBudget.Budgets.destroy()
+
+    {user_two_response, _user_two_result} = user_two_attempt_delete
+
+    assert user_two_response == :error
+
+    user_one_attempt_delete =
+      budget
+      |> Ash.Changeset.for_destroy(:destroy, %{}, actor: user_one)
+      |> OpenBudget.Budgets.destroy()
+
+    assert user_one_attempt_delete == :ok
+
+    get_budgets_after_destroy =
+      OpenBudget.Budgets.Budget
+      |> Ash.Query.for_read(:read, %{}, actor: user_one)
+      |> OpenBudget.Budgets.read!()
+
+    assert get_budgets_after_destroy == []
+  end
+
   test "can assign user to budget" do
     user =
       OpenBudget.Accounts.User
