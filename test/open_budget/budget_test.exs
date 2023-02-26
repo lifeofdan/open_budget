@@ -59,10 +59,9 @@ defmodule OpenBudget.BudgetTest do
       })
       |> OpenBudget.Accounts.create!()
 
-    budget =
-      OpenBudget.Budgets.Budget
-      |> Ash.Changeset.for_create(:new_budget, %{title: "My user_one budget"}, actor: user_one)
-      |> OpenBudget.Budgets.create!()
+    OpenBudget.Budgets.Budget
+    |> Ash.Changeset.for_create(:new_budget, %{title: "My user_one budget"}, actor: user_one)
+    |> OpenBudget.Budgets.create!()
 
     read_budget_user_one =
       OpenBudget.Budgets.Budget
@@ -74,9 +73,9 @@ defmodule OpenBudget.BudgetTest do
       |> Ash.Query.for_read(:read, %{}, actor: user_two)
       |> OpenBudget.Budgets.read!()
 
-    {responded, result} = read_budget_user_one
+    {response, _result} = read_budget_user_one
 
-    assert responded == :ok
+    assert response == :ok
     assert read_budget_user_two == []
   end
 
@@ -112,6 +111,57 @@ defmodule OpenBudget.BudgetTest do
     assert error_type == :invalid
   end
 
+  test "user can update own budget title, user cannot update other user's budget" do
+    user_one =
+      OpenBudget.Accounts.User
+      |> Ash.Changeset.for_create(:register_with_password, %{
+        email: "test@user.com",
+        hashed_password: "password",
+        password: "password",
+        password_confirmation: "password"
+      })
+      |> OpenBudget.Accounts.create!()
+
+    user_two =
+      OpenBudget.Accounts.User
+      |> Ash.Changeset.for_create(:register_with_password, %{
+        email: "test@user2.com",
+        hashed_password: "password",
+        password: "password",
+        password_confirmation: "password"
+      })
+      |> OpenBudget.Accounts.create!()
+
+    budget =
+      OpenBudget.Budgets.Budget
+      |> Ash.Changeset.for_create(:new_budget, %{title: "My new budget"}, actor: user_one)
+      |> OpenBudget.Budgets.create!()
+
+    %{title: title} = budget
+
+    assert title == "My new budget"
+
+    updated_budget =
+      budget
+      |> Ash.Changeset.for_update(:update_title, %{title: "My updated budget"}, actor: user_one)
+      |> OpenBudget.Budgets.update!()
+
+    %{title: updated_title} = updated_budget
+
+    assert updated_title == "My updated budget"
+
+    updated_budget_user_two =
+      budget
+      |> Ash.Changeset.for_update(:update_title, %{title: "My updated budget by user two"},
+        actor: user_two
+      )
+      |> OpenBudget.Budgets.update()
+
+    {response, _result} = updated_budget_user_two
+
+    assert response == :error
+  end
+
   test "can assign user to budget" do
     user =
       OpenBudget.Accounts.User
@@ -126,6 +176,10 @@ defmodule OpenBudget.BudgetTest do
     budget =
       OpenBudget.Budgets.Budget
       |> Ash.Changeset.for_create(:new_budget, %{title: "My new budget"}, actor: user)
-      |> OpenBudget.Budgets.create!()
+      |> OpenBudget.Budgets.create()
+
+    {response, _result} = budget
+
+    assert response == :ok
   end
 end
