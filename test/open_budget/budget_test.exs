@@ -64,6 +64,7 @@ defmodule OpenBudget.BudgetTest do
       |> Ash.Changeset.for_create(:new_budget, %{title: "My user_one budget"}, actor: user_one)
       |> OpenBudget.Budgets.create!()
 
+    # This is not working TODO. This should error without a user.
     read_budget =
       OpenBudget.Budgets.Budget
       |> Ash.Query.for_read(:read)
