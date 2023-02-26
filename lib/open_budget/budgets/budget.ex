@@ -16,7 +16,7 @@ defmodule OpenBudget.Budgets.Budget do
       authorize_if actor_present()
     end
 
-    policy action_type([:read, :update]) do
+    policy action_type(:read) do
       # You can only read or update your own budget
       authorize_if relates_to_actor_via(:user)
     end

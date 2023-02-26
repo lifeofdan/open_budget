@@ -38,7 +38,7 @@ defmodule OpenBudget.BudgetTest do
     assert error_type == :invalid
   end
 
-  test "cannot read another user's budget" do
+  test "can read own budget, cannot read another user's budget" do
     user_one =
       OpenBudget.Accounts.User
       |> Ash.Changeset.for_create(:register_with_password, %{
@@ -64,11 +64,30 @@ defmodule OpenBudget.BudgetTest do
       |> Ash.Changeset.for_create(:new_budget, %{title: "My user_one budget"}, actor: user_one)
       |> OpenBudget.Budgets.create!()
 
-    # This is not working TODO. This should error without a user.
+    read_budget_user_one =
+      OpenBudget.Budgets.Budget
+      |> Ash.Query.for_read(:read, %{}, actor: user_one)
+      |> OpenBudget.Budgets.read()
+
+    read_budget_user_two =
+      OpenBudget.Budgets.Budget
+      |> Ash.Query.for_read(:read, %{}, actor: user_two)
+      |> OpenBudget.Budgets.read!()
+
+    {responded, result} = read_budget_user_one
+
+    assert responded == :ok
+    assert read_budget_user_two == []
+  end
+
+  test "cannot read budget without an actor" do
     read_budget =
       OpenBudget.Budgets.Budget
-      |> Ash.Query.for_read(:read)
-      |> OpenBudget.Budgets.read!()
+      |> Ash.Query.for_read(:read, %{})
+      |> OpenBudget.Budgets.read()
+
+    {err, _response} = read_budget
+    assert err == :error
   end
 
   test "cannot create budget without title" do
