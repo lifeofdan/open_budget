@@ -25,6 +25,7 @@ defmodule OpenBudget.Budgets.Budget do
   attributes do
     uuid_primary_key :id
     attribute :title, :string, allow_nil?: false
+    attribute :active, :boolean, allow_nil?: false, default: false
   end
 
   actions do
@@ -36,14 +37,18 @@ defmodule OpenBudget.Budgets.Budget do
     end
 
     create :new_budget do
-      accept [:title]
+      require_attributes [:title, :active]
 
       argument :user, OpenBudget.Accounts.User
       change relate_actor(:user)
     end
 
     update :update_title do
-      accept [:title]
+      require_attributes [:title]
+    end
+
+    update :update_active do
+      require_attributes [:active]
     end
   end
 

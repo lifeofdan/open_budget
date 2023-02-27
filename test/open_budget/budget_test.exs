@@ -20,7 +20,9 @@ defmodule OpenBudget.BudgetTest do
 
     budget =
       OpenBudget.Budgets.Budget
-      |> Ash.Changeset.for_create(:new_budget, %{title: "My new budget"}, actor: user)
+      |> Ash.Changeset.for_create(:new_budget, %{title: "My new budget", active: true},
+        actor: user
+      )
       |> OpenBudget.Budgets.create!()
 
     assert budget.title == "My new budget"
@@ -29,7 +31,7 @@ defmodule OpenBudget.BudgetTest do
   test "cannot create budget without user" do
     budget =
       OpenBudget.Budgets.Budget
-      |> Ash.Changeset.for_create(:new_budget, %{title: "My new budget"})
+      |> Ash.Changeset.for_create(:new_budget, %{title: "My new budget", active: true})
 
     %{errors: errors} = budget
     [%{relationship: relationship_error, class: error_type}] = errors
@@ -60,7 +62,9 @@ defmodule OpenBudget.BudgetTest do
       |> OpenBudget.Accounts.create!()
 
     OpenBudget.Budgets.Budget
-    |> Ash.Changeset.for_create(:new_budget, %{title: "My user_one budget"}, actor: user_one)
+    |> Ash.Changeset.for_create(:new_budget, %{title: "My user_one budget", active: true},
+      actor: user_one
+    )
     |> OpenBudget.Budgets.create!()
 
     read_budget_user_one =
@@ -89,7 +93,7 @@ defmodule OpenBudget.BudgetTest do
     assert err == :error
   end
 
-  test "cannot create budget without title" do
+  test "cannot create budget without title or setting active status" do
     user =
       OpenBudget.Accounts.User
       |> Ash.Changeset.for_create(:register_with_password, %{
@@ -103,15 +107,23 @@ defmodule OpenBudget.BudgetTest do
     budget =
       OpenBudget.Budgets.Budget
       |> Ash.Changeset.for_create(:new_budget, %{}, actor: user)
+      |> OpenBudget.Budgets.create()
 
-    %{errors: errors} = budget
-    [%{field: error_field, class: error_type}] = errors
+    {response, result} = budget
 
-    assert error_field == :title
-    assert error_type == :invalid
+    assert response == :error
+
+    %{errors: [first, last]} = result
+    %{field: first_field, class: first_class} = first
+    %{field: last_field, class: last_class} = last
+
+    assert first_field == :title
+    assert first_class == :invalid
+    assert last_field == :active
+    assert last_class == :invalid
   end
 
-  test "user can update own budget title, user cannot update other user's budget" do
+  test "user can update own budget title or active status, user cannot update other user's budget" do
     user_one =
       OpenBudget.Accounts.User
       |> Ash.Changeset.for_create(:register_with_password, %{
@@ -134,7 +146,9 @@ defmodule OpenBudget.BudgetTest do
 
     budget =
       OpenBudget.Budgets.Budget
-      |> Ash.Changeset.for_create(:new_budget, %{title: "My new budget"}, actor: user_one)
+      |> Ash.Changeset.for_create(:new_budget, %{title: "My new budget", active: true},
+        actor: user_one
+      )
       |> OpenBudget.Budgets.create!()
 
     %{title: title} = budget
@@ -150,6 +164,15 @@ defmodule OpenBudget.BudgetTest do
 
     assert updated_title == "My updated budget"
 
+    updated_budget_status =
+      budget
+      |> Ash.Changeset.for_update(:update_active, %{active: false}, actor: user_one)
+      |> OpenBudget.Budgets.update!()
+
+    %{active: updated_active} = updated_budget_status
+
+    assert updated_active == false
+
     updated_budget_user_two =
       budget
       |> Ash.Changeset.for_update(:update_title, %{title: "My updated budget by user two"},
@@ -160,9 +183,21 @@ defmodule OpenBudget.BudgetTest do
     {response, _result} = updated_budget_user_two
 
     assert response == :error
+
+    updated_budget_status_user_two =
+      budget
+      |> Ash.Changeset.for_update(:update_active, %{active: false}, actor: user_two)
+      |> OpenBudget.Budgets.update()
+
+    {status_response, _status_result} = updated_budget_status_user_two
+
+    assert status_response == :error
   end
 
-  test "user can delete own budget, user cannot delete other's budget" do
+  test "
+    user can delete own budget,
+    user cannot delete other user's budget,
+    must pass user to delete budget" do
     user_one =
       OpenBudget.Accounts.User
       |> Ash.Changeset.for_create(:register_with_password, %{
@@ -185,7 +220,9 @@ defmodule OpenBudget.BudgetTest do
 
     budget =
       OpenBudget.Budgets.Budget
-      |> Ash.Changeset.for_create(:new_budget, %{title: "My new budget"}, actor: user_one)
+      |> Ash.Changeset.for_create(:new_budget, %{title: "My new budget", active: true},
+        actor: user_one
+      )
       |> OpenBudget.Budgets.create!()
 
     user_two_attempt_delete =
@@ -196,6 +233,15 @@ defmodule OpenBudget.BudgetTest do
     {user_two_response, _user_two_result} = user_two_attempt_delete
 
     assert user_two_response == :error
+
+    no_user_attempt_delete =
+      budget
+      |> Ash.Changeset.for_destroy(:destroy)
+      |> OpenBudget.Budgets.destroy()
+
+    {no_user_response, _no_user_result} = no_user_attempt_delete
+
+    assert no_user_response == :error
 
     user_one_attempt_delete =
       budget
@@ -225,7 +271,9 @@ defmodule OpenBudget.BudgetTest do
 
     budget =
       OpenBudget.Budgets.Budget
-      |> Ash.Changeset.for_create(:new_budget, %{title: "My new budget"}, actor: user)
+      |> Ash.Changeset.for_create(:new_budget, %{title: "My new budget", active: true},
+        actor: user
+      )
       |> OpenBudget.Budgets.create()
 
     {response, _result} = budget
