@@ -3,5 +3,6 @@ defmodule OpenBudget.Budgets.Registry do
 
   entries do
     entry OpenBudget.Budgets.Budget
+    entry OpenBudget.Budgets.BankAccount
   end
 end
