@@ -9,6 +9,12 @@ defmodule OpenBudget.Accounts.User do
     attribute :hashed_password, :string, allow_nil?: false, sensitive?: true
   end
 
+  relationships do
+    has_many :budget, OpenBudget.Budgets.Budget do
+      api OpenBudget.Budgets
+    end
+  end
+
   authentication do
     api OpenBudget.Accounts
 
