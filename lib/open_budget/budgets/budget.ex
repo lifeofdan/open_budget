@@ -8,6 +8,10 @@ defmodule OpenBudget.Budgets.Budget do
       api OpenBudget.Accounts.User
       attribute_writable? true
     end
+
+    has_many :bank_account, OpenBudget.Budgets.BankAccount do
+      destination_attribute :budget_id
+    end
   end
 
   policies do
