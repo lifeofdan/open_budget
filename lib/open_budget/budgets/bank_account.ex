@@ -14,7 +14,7 @@ defmodule OpenBudget.Budgets.BankAccount do
       authorize_if actor_present()
     end
 
-    policy action_type([:read, :update]) do
+    policy action_type([:read, :update, :destroy]) do
       authorize_if relates_to_actor_via(:budget)
     end
   end
