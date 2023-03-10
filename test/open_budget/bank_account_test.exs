@@ -103,7 +103,7 @@ defmodule OpenBudget.BankAccountTest do
     assert title == "My new account"
   end
 
-  test "must have budget to update" do
+  test "must have budget to update, can update title, can update balance" do
     user =
       User
       |> Ash.Changeset.for_create(:register_with_password, %{
@@ -149,6 +149,14 @@ defmodule OpenBudget.BankAccountTest do
 
     {response_ok, _result_ok} = update_account_ok
 
+    update_balance =
+      account
+      |> Ash.Changeset.for_update(:balance, %{balance: 1.00}, actor: budget)
+      |> OpenBudget.Budgets.update()
+
+    {update_balance_response, update_balance_result} = update_balance
+
+    assert update_balance_response == :ok
     assert response_ok == :ok
   end
 
