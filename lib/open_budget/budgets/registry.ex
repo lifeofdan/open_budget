@@ -5,5 +5,6 @@ defmodule OpenBudget.Budgets.Registry do
     entry OpenBudget.Budgets.Budget
     entry OpenBudget.Budgets.BankAccount
     entry OpenBudget.Budgets.Transaction
+    entry OpenBudget.Budgets.Category
   end
 end

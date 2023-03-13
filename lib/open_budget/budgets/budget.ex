@@ -12,6 +12,10 @@ defmodule OpenBudget.Budgets.Budget do
     has_many :bank_account, OpenBudget.Budgets.BankAccount do
       destination_attribute :budget_id
     end
+
+    has_many :category, OpenBudget.Budgets.Category do
+      destination_attribute :budget_id
+    end
   end
 
   policies do
