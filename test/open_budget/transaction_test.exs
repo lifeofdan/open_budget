@@ -441,12 +441,56 @@ defmodule OpenBudget.TransactionTest do
     %{errors: errors} = result
     [%{class: error_class}] = errors
 
+    assert response == :error
+    assert error_class == :forbidden
+  end
+
+  test "cannot read single transaction with invalid actor" do
+    user =
+      OpenBudget.Accounts.User
+      |> Ash.Changeset.for_create(:register_with_password, %{
+        email: "test@user.com",
+        hashed_password: "password",
+        password: "password",
+        password_confirmation: "password"
+      })
+      |> OpenBudget.Accounts.create!()
+
+    budget =
+      OpenBudget.Budgets.Budget
+      |> Ash.Changeset.for_create(:new_budget, %{title: "My new budget", active: true},
+        actor: user
+      )
+      |> OpenBudget.Budgets.create!()
+
+    bank_account =
+      OpenBudget.Budgets.BankAccount
+      |> Ash.Changeset.for_create(
+        :create_bank_account,
+        %{
+          title: "My new account",
+          budget_id: budget.id
+        },
+        actor: user
+      )
+      |> OpenBudget.Budgets.create!()
+
+    transaction =
+      OpenBudget.Budgets.Transaction
+      |> Ash.Changeset.for_create(
+        :create_transaction,
+        %{
+          title: "New transaction",
+          amount: -14.53,
+          bank_account_id: bank_account.id
+        },
+        actor: budget
+      )
+      |> OpenBudget.Budgets.create!()
+
     invalid_transaction = OpenBudget.Budgets.Transaction.get_by_id(transaction.id, actor: budget)
 
     {invalid_response, invalid_result} = invalid_transaction
-
-    assert response == :error
-    assert error_class == :forbidden
     assert invalid_response == :error
     assert invalid_result.class == :invalid
   end
@@ -507,5 +551,223 @@ defmodule OpenBudget.TransactionTest do
       |> OpenBudget.Budgets.read!()
 
     assert length(read_transaction_ok) != 0
+  end
+
+  test "can update transaction" do
+    user =
+      OpenBudget.Accounts.User
+      |> Ash.Changeset.for_create(:register_with_password, %{
+        email: "test@user.com",
+        hashed_password: "password",
+        password: "password",
+        password_confirmation: "password"
+      })
+      |> OpenBudget.Accounts.create!()
+
+    budget =
+      OpenBudget.Budgets.Budget
+      |> Ash.Changeset.for_create(:new_budget, %{title: "My new budget", active: true},
+        actor: user
+      )
+      |> OpenBudget.Budgets.create!()
+
+    bank_account =
+      OpenBudget.Budgets.BankAccount
+      |> Ash.Changeset.for_create(
+        :create_bank_account,
+        %{
+          title: "My new account",
+          budget_id: budget.id
+        },
+        actor: user
+      )
+      |> OpenBudget.Budgets.create!()
+
+    transaction =
+      OpenBudget.Budgets.Transaction
+      |> Ash.Changeset.for_create(
+        :create_transaction,
+        %{
+          title: "New transaction",
+          amount: -14.53,
+          bank_account_id: bank_account.id
+        },
+        actor: budget
+      )
+      |> OpenBudget.Budgets.create!()
+
+    assert transaction.title == "New transaction"
+
+    updated_transaction =
+      transaction
+      |> Ash.Changeset.for_update(:title, %{title: "Updated transaction"}, actor: bank_account)
+      |> OpenBudget.Budgets.update!()
+
+    assert updated_transaction.title == "Updated transaction"
+  end
+
+  test "cannot update without actor, forbidden" do
+    user =
+      OpenBudget.Accounts.User
+      |> Ash.Changeset.for_create(:register_with_password, %{
+        email: "test@user.com",
+        hashed_password: "password",
+        password: "password",
+        password_confirmation: "password"
+      })
+      |> OpenBudget.Accounts.create!()
+
+    budget =
+      OpenBudget.Budgets.Budget
+      |> Ash.Changeset.for_create(:new_budget, %{title: "My new budget", active: true},
+        actor: user
+      )
+      |> OpenBudget.Budgets.create!()
+
+    bank_account =
+      OpenBudget.Budgets.BankAccount
+      |> Ash.Changeset.for_create(
+        :create_bank_account,
+        %{
+          title: "My new account",
+          budget_id: budget.id
+        },
+        actor: user
+      )
+      |> OpenBudget.Budgets.create!()
+
+    transaction =
+      OpenBudget.Budgets.Transaction
+      |> Ash.Changeset.for_create(
+        :create_transaction,
+        %{
+          title: "New transaction",
+          amount: -14.53,
+          bank_account_id: bank_account.id
+        },
+        actor: budget
+      )
+      |> OpenBudget.Budgets.create!()
+
+    update_transaction =
+      transaction
+      |> Ash.Changeset.for_update(:title, %{title: "Update transaction"})
+      |> OpenBudget.Budgets.update()
+
+    {response, result} = update_transaction
+    %{errors: [%{class: result_errors_class}]} = result
+
+    assert response == :error
+    assert result_errors_class == :forbidden
+  end
+
+  test "cannot update with incorrect actor" do
+    user =
+      OpenBudget.Accounts.User
+      |> Ash.Changeset.for_create(:register_with_password, %{
+        email: "test@user.com",
+        hashed_password: "password",
+        password: "password",
+        password_confirmation: "password"
+      })
+      |> OpenBudget.Accounts.create!()
+
+    budget =
+      OpenBudget.Budgets.Budget
+      |> Ash.Changeset.for_create(:new_budget, %{title: "My new budget", active: true},
+        actor: user
+      )
+      |> OpenBudget.Budgets.create!()
+
+    bank_account =
+      OpenBudget.Budgets.BankAccount
+      |> Ash.Changeset.for_create(
+        :create_bank_account,
+        %{
+          title: "My new account",
+          budget_id: budget.id
+        },
+        actor: user
+      )
+      |> OpenBudget.Budgets.create!()
+
+    transaction =
+      OpenBudget.Budgets.Transaction
+      |> Ash.Changeset.for_create(
+        :create_transaction,
+        %{
+          title: "New transaction",
+          amount: -14.53,
+          bank_account_id: bank_account.id
+        },
+        actor: budget
+      )
+      |> OpenBudget.Budgets.create!()
+
+    update_transaction =
+      transaction
+      |> Ash.Changeset.for_update(:title, %{title: "Update transaction"}, actor: user)
+      |> OpenBudget.Budgets.update()
+
+    {response, result} = update_transaction
+    %{errors: [%{class: result_errors_class}]} = result
+
+    assert response == :error
+    assert result_errors_class == :forbidden
+  end
+
+  test "cannot update amount when using :title action" do
+    user =
+      OpenBudget.Accounts.User
+      |> Ash.Changeset.for_create(:register_with_password, %{
+        email: "test@user.com",
+        hashed_password: "password",
+        password: "password",
+        password_confirmation: "password"
+      })
+      |> OpenBudget.Accounts.create!()
+
+    budget =
+      OpenBudget.Budgets.Budget
+      |> Ash.Changeset.for_create(:new_budget, %{title: "My new budget", active: true},
+        actor: user
+      )
+      |> OpenBudget.Budgets.create!()
+
+    bank_account =
+      OpenBudget.Budgets.BankAccount
+      |> Ash.Changeset.for_create(
+        :create_bank_account,
+        %{
+          title: "My new account",
+          budget_id: budget.id
+        },
+        actor: user
+      )
+      |> OpenBudget.Budgets.create!()
+
+    transaction =
+      OpenBudget.Budgets.Transaction
+      |> Ash.Changeset.for_create(
+        :create_transaction,
+        %{
+          title: "New transaction",
+          amount: -14.53,
+          bank_account_id: bank_account.id
+        },
+        actor: budget
+      )
+      |> OpenBudget.Budgets.create!()
+
+    update_with_amount =
+      transaction
+      |> Ash.Changeset.for_update(:title, %{amount: 0}, actor: bank_account)
+      |> OpenBudget.Budgets.update()
+
+    {response, result} = update_with_amount
+    %{errors: [%{class: result_error_class}]} = result
+
+    assert response == :error
+    assert result_error_class == :invalid
   end
 end
