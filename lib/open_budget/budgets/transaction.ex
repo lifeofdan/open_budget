@@ -26,6 +26,11 @@ defmodule OpenBudget.Budgets.Transaction do
     attribute :bank_account_id, :uuid, allow_nil?: false
   end
 
+  code_interface do
+    define_for OpenBudget.Budgets
+    define :get_by_id, action: :get_transaction_by_id, args: [:id], get?: true
+  end
+
   actions do
     defaults [:read, :update, :destroy]
 
@@ -41,6 +46,16 @@ defmodule OpenBudget.Budgets.Transaction do
 
     update :update_title do
       require_attributes [:title]
+    end
+
+    read :get_transaction_by_id do
+      get? true
+
+      argument :id, :uuid do
+        allow_nil? false
+      end
+
+      filter id: arg(:id)
     end
   end
 
