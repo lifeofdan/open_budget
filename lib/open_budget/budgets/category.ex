@@ -32,6 +32,11 @@ defmodule OpenBudget.Budgets.Category do
     attribute :budget_id, :uuid, allow_nil?: false
   end
 
+  code_interface do
+    define_for OpenBudget.Budgets
+    define :get_by_id, action: :get_category_by_id, args: [:id], get?: true
+  end
+
   actions do
     defaults [:read, :update, :destroy]
 
@@ -51,6 +56,16 @@ defmodule OpenBudget.Budgets.Category do
 
     update :parent do
       require_attributes [:parent_id]
+    end
+
+    read :get_category_by_id do
+      get? true
+
+      argument :id, :uuid do
+        allow_nil? false
+      end
+
+      filter id: arg(:id)
     end
   end
 
