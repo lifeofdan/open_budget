@@ -44,8 +44,12 @@ defmodule OpenBudget.Budgets.Transaction do
       change manage_relationship(:bank_account_id, :bank_account, type: :append_and_remove)
     end
 
-    update :update_title do
-      require_attributes [:title]
+    update :title do
+      accept [:title]
+    end
+
+    update :amount do
+      accept [:amount]
     end
 
     read :get_transaction_by_id do
