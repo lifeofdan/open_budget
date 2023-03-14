@@ -154,7 +154,7 @@ defmodule OpenBudget.BankAccountTest do
       |> Ash.Changeset.for_update(:balance, %{balance: 1.00}, actor: budget)
       |> OpenBudget.Budgets.update()
 
-    {update_balance_response, update_balance_result} = update_balance
+    {update_balance_response, _update_balance_result} = update_balance
 
     assert update_balance_response == :ok
     assert response_ok == :ok
