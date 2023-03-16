@@ -952,4 +952,246 @@ defmodule OpenBudget.TransactionTest do
     assert response == :error
     assert result_error_class == :forbidden
   end
+
+  test "can clear transaction and update bank_account balance" do
+    user =
+      OpenBudget.Accounts.User
+      |> Ash.Changeset.for_create(:register_with_password, %{
+        email: "test@user.com",
+        hashed_password: "password",
+        password: "password",
+        password_confirmation: "password"
+      })
+      |> OpenBudget.Accounts.create!()
+
+    budget =
+      OpenBudget.Budgets.Budget
+      |> Ash.Changeset.for_create(:new_budget, %{title: "My new budget", active: true},
+        actor: user
+      )
+      |> OpenBudget.Budgets.create!()
+
+    bank_account =
+      OpenBudget.Budgets.BankAccount
+      |> Ash.Changeset.for_create(
+        :create_bank_account,
+        %{
+          title: "My new account",
+          budget_id: budget.id
+        },
+        actor: user
+      )
+      |> OpenBudget.Budgets.create!()
+
+    transaction =
+      OpenBudget.Budgets.Transaction
+      |> Ash.Changeset.for_create(
+        :create_transaction,
+        %{
+          title: "New transaction",
+          amount: -14.53,
+          bank_account_id: bank_account.id
+        },
+        actor: budget
+      )
+      |> OpenBudget.Budgets.create!()
+
+    cleared =
+      transaction
+      |> Ash.Changeset.for_update(:clear, %{budget: budget}, actor: bank_account)
+      |> OpenBudget.Budgets.update()
+
+    {cleared_response, cleared_result} = cleared
+
+    read_bank_account = OpenBudget.Budgets.BankAccount.get_by_id(bank_account.id, actor: budget)
+
+    {response, result} = read_bank_account
+
+    assert cleared_response == :ok
+    assert cleared_result.pending == false
+    assert response == :ok
+    assert Decimal.to_float(bank_account.balance) == 0
+    assert Decimal.to_float(result.balance) == -14.53
+  end
+
+  test "can pending transaction revert amount positive or negative and update bank_account balance" do
+    user =
+      OpenBudget.Accounts.User
+      |> Ash.Changeset.for_create(:register_with_password, %{
+        email: "test@user.com",
+        hashed_password: "password",
+        password: "password",
+        password_confirmation: "password"
+      })
+      |> OpenBudget.Accounts.create!()
+
+    budget =
+      OpenBudget.Budgets.Budget
+      |> Ash.Changeset.for_create(:new_budget, %{title: "My new budget", active: true},
+        actor: user
+      )
+      |> OpenBudget.Budgets.create!()
+
+    bank_account =
+      OpenBudget.Budgets.BankAccount
+      |> Ash.Changeset.for_create(
+        :create_bank_account,
+        %{
+          title: "My new account",
+          budget_id: budget.id
+        },
+        actor: user
+      )
+      |> OpenBudget.Budgets.create!()
+
+    transaction_positive =
+      OpenBudget.Budgets.Transaction
+      |> Ash.Changeset.for_create(
+        :create_transaction,
+        %{
+          title: "New transaction",
+          amount: 14.53,
+          bank_account_id: bank_account.id
+        },
+        actor: budget
+      )
+      |> OpenBudget.Budgets.create!()
+
+    transaction_negative =
+      OpenBudget.Budgets.Transaction
+      |> Ash.Changeset.for_create(
+        :create_transaction,
+        %{
+          title: "New transaction",
+          amount: -14.53,
+          bank_account_id: bank_account.id
+        },
+        actor: budget
+      )
+      |> OpenBudget.Budgets.create!()
+
+    cleared_positive =
+      transaction_positive
+      |> Ash.Changeset.for_update(:clear, %{budget: budget}, actor: bank_account)
+      |> OpenBudget.Budgets.update()
+
+    {cleared_positive_response, cleared_positive_result} = cleared_positive
+
+    read_bank_account = OpenBudget.Budgets.BankAccount.get_by_id(bank_account.id, actor: budget)
+
+    {response, result} = read_bank_account
+
+    assert cleared_positive_response == :ok
+    assert cleared_positive_result.pending == false
+    assert response == :ok
+    assert Decimal.to_float(bank_account.balance) == 0
+    assert Decimal.to_float(result.balance) == 14.53
+
+    pending_positive =
+      transaction_positive
+      |> Ash.Changeset.for_update(:pending, %{budget: budget}, actor: bank_account)
+      |> OpenBudget.Budgets.update()
+
+    {pending_positive_response, pending_positive_result} = pending_positive
+
+    read_bank_account_two =
+      OpenBudget.Budgets.BankAccount.get_by_id(bank_account.id, actor: budget)
+
+    {response_two, result_two} = read_bank_account_two
+
+    assert pending_positive_response == :ok
+    assert pending_positive_result.pending == true
+    assert response_two == :ok
+    assert Decimal.to_float(bank_account.balance) == 0
+    assert Decimal.to_float(result_two.balance) == 0
+
+    cleared_negative =
+      transaction_negative
+      |> Ash.Changeset.for_update(:clear, %{budget: budget}, actor: bank_account)
+      |> OpenBudget.Budgets.update()
+
+    {cleared_negative_response, cleared_negative_result} = cleared_negative
+
+    read_bank_account_three =
+      OpenBudget.Budgets.BankAccount.get_by_id(bank_account.id, actor: budget)
+
+    {response_three, result_three} = read_bank_account_three
+
+    assert cleared_negative_response == :ok
+    assert cleared_negative_result.pending == false
+    assert response_three == :ok
+    assert Decimal.to_float(bank_account.balance) == 0
+    assert Decimal.to_float(result_three.balance) == -14.53
+
+    pending_negative =
+      transaction_negative
+      |> Ash.Changeset.for_update(:pending, %{budget: budget}, actor: bank_account)
+      |> OpenBudget.Budgets.update()
+
+    {pending_negative_response, pending_negative_result} = pending_negative
+
+    read_bank_account_four =
+      OpenBudget.Budgets.BankAccount.get_by_id(bank_account.id, actor: budget)
+
+    {response_four, result_four} = read_bank_account_four
+
+    assert pending_negative_response == :ok
+    assert pending_negative_result.pending == true
+    assert response_four == :ok
+    assert Decimal.to_float(bank_account.balance) == 0
+    assert Decimal.to_float(result_four.balance) == 0
+  end
+
+  test "pending already pending transaction does nothing" do
+    user =
+      OpenBudget.Accounts.User
+      |> Ash.Changeset.for_create(:register_with_password, %{
+        email: "test@user.com",
+        hashed_password: "password",
+        password: "password",
+        password_confirmation: "password"
+      })
+      |> OpenBudget.Accounts.create!()
+
+    budget =
+      OpenBudget.Budgets.Budget
+      |> Ash.Changeset.for_create(:new_budget, %{title: "My new budget", active: true},
+        actor: user
+      )
+      |> OpenBudget.Budgets.create!()
+
+    bank_account =
+      OpenBudget.Budgets.BankAccount
+      |> Ash.Changeset.for_create(
+        :create_bank_account,
+        %{
+          title: "My new account",
+          budget_id: budget.id
+        },
+        actor: user
+      )
+      |> OpenBudget.Budgets.create!()
+
+    assert Decimal.to_float(bank_account.balance) == 0
+
+    transaction_positive =
+      OpenBudget.Budgets.Transaction
+      |> Ash.Changeset.for_create(
+        :create_transaction,
+        %{
+          title: "New transaction",
+          amount: 14.53,
+          bank_account_id: bank_account.id
+        },
+        actor: budget
+      )
+      |> OpenBudget.Budgets.create!()
+
+    transaction_positive
+    |> Ash.Changeset.for_update(:pending, %{budget: budget}, actor: bank_account)
+    |> OpenBudget.Budgets.update!()
+
+    updated_bank_account_balance =
+      OpenBudget.Budgets.BankAccount.get_by_id(bank_account.id, actor: budget)
+  end
 end
