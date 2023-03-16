@@ -24,6 +24,7 @@ defmodule OpenBudget.Budgets.Transaction do
     attribute :title, :string, allow_nil?: false
     attribute :amount, :decimal, allow_nil?: false, default: 0
     attribute :bank_account_id, :uuid, allow_nil?: false
+    attribute :pending, :boolean, allow_nil?: false, default: true
   end
 
   code_interface do
