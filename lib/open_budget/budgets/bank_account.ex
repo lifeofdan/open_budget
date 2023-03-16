@@ -30,6 +30,11 @@ defmodule OpenBudget.Budgets.BankAccount do
     attribute :budget_id, :uuid, allow_nil?: false
   end
 
+  code_interface do
+    define_for OpenBudget.Budgets
+    define :get_by_id, action: :get_bank_account_by_id, args: [:id], get?: true
+  end
+
   actions do
     defaults [:read, :update, :destroy]
 
@@ -41,6 +46,16 @@ defmodule OpenBudget.Budgets.BankAccount do
       end
 
       change manage_relationship(:budget_id, :budget, type: :append_and_remove)
+    end
+
+    read :get_bank_account_by_id do
+      get? true
+
+      argument :id, :uuid do
+        allow_nil? false
+      end
+
+      filter id: arg(:id)
     end
 
     update :update_title do
