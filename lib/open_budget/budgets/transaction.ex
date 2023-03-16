@@ -3,6 +3,8 @@ defmodule OpenBudget.Budgets.Transaction do
     data_layer: AshPostgres.DataLayer,
     authorizers: [Ash.Policy.Authorizer]
 
+  require Decimal
+
   relationships do
     belongs_to :bank_account, OpenBudget.Budgets.BankAccount do
       primary_key? true
@@ -61,6 +63,77 @@ defmodule OpenBudget.Budgets.Transaction do
       end
 
       filter id: arg(:id)
+    end
+
+    update :clear do
+      change set_attribute(:pending, false)
+
+      argument :budget, :map do
+        allow_nil? false
+      end
+
+      change fn changeset, _ ->
+        Ash.Changeset.after_action(changeset, fn changeset, result ->
+          budget = changeset.arguments.budget
+
+          bank_account =
+            OpenBudget.Budgets.BankAccount
+            |> Ash.Query.for_read(:read, %{}, actor: budget)
+            |> OpenBudget.Budgets.read_one!()
+
+          new_balance = Decimal.add(result.bank_account.balance, result.amount)
+
+          updated_bank_account =
+            bank_account
+            |> Ash.Changeset.for_update(
+              :balance,
+              %{balance: new_balance},
+              actor: budget
+            )
+            |> OpenBudget.Budgets.update!()
+
+          {:ok, result}
+        end)
+      end
+    end
+
+    update :pending do
+      change set_attribute(:pending, true)
+
+      argument :budget, :map do
+        allow_nil? false
+      end
+
+      change fn changeset, _ ->
+        Ash.Changeset.after_action(changeset, fn changeset, result ->
+          budget = changeset.arguments.budget
+
+          bank_account =
+            OpenBudget.Budgets.BankAccount
+            |> Ash.Query.for_read(:read, %{}, actor: budget)
+            |> OpenBudget.Budgets.read_one!()
+
+          new_balance = 0
+
+          if bank_account >= 0 do
+            new_balance = Decimal.sub(result.bank_account.balance, result.amount)
+          else
+            negative_to_positive = Decimal.mult(-1, result.amount)
+            new_balance = Decimal.add(result.bank_account.balance, negative_to_positive)
+          end
+
+          updated_bank_account =
+            bank_account
+            |> Ash.Changeset.for_update(
+              :balance,
+              %{balance: new_balance},
+              actor: budget
+            )
+            |> OpenBudget.Budgets.update!()
+
+          {:ok, result}
+        end)
+      end
     end
   end
 
