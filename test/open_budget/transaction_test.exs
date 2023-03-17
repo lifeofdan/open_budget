@@ -1192,6 +1192,8 @@ defmodule OpenBudget.TransactionTest do
     |> OpenBudget.Budgets.update!()
 
     updated_bank_account_balance =
-      OpenBudget.Budgets.BankAccount.get_by_id(bank_account.id, actor: budget)
+      OpenBudget.Budgets.BankAccount.get_by_id!(bank_account.id, actor: budget)
+
+    assert Decimal.to_float(updated_bank_account_balance.balance) == 0
   end
 end
