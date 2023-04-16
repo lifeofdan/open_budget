@@ -21,6 +21,7 @@ defmodule OpenBudgetWeb.Router do
     pipe_through :browser
 
     get "/", PageController, :home
+    get "/dashboard", DashboardController, :index
 
     # Ash Auth routes
     sign_in_route()

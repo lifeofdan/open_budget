@@ -3,7 +3,7 @@ defmodule OpenBudgetWeb.AuthController do
   use AshAuthentication.Phoenix.Controller
 
   def success(conn, _activity, user, _token) do
-    return_to = get_session(conn, :return_to) || ~p"/"
+    return_to = get_session(conn, :return_to) || ~p"/budget"
 
     conn
     |> delete_session(:return_to)
@@ -15,7 +15,7 @@ defmodule OpenBudgetWeb.AuthController do
   def failure(conn, _activity, _reason) do
     conn
     |> put_status(401)
-    |> render("failure.html")
+    |> render(:failure)
   end
 
   def sign_out(conn, _params) do
